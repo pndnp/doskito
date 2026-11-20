@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
-export function createTestDatabase(): { prisma: PrismaClient; cleanup: () => Promise<void> } {
+export interface TestDatabase {
+  prisma: PrismaClient;
+  cleanup: () => Promise<void>;
+}
+
+const instances: PrismaClient[] = [];
+
+export function createTestDatabase(): TestDatabase {
   const directory = mkdtempSync(join(tmpdir(), 'doskito-test-'));
   const datasourceUrl = `file:${join(directory, 'doskito.db')}`;
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'deploy'], {
@@ -12,8 +19,8 @@ export function createTestDatabase(): { prisma: PrismaClient; cleanup: () => Pro
     env: { ...process.env, DATABASE_URL: datasourceUrl },
     stdio: 'pipe',
   });
-  const prisma = new PrismaClient({ datasourceUrl });
-
+  const prisma = new PrismaClient({ datasources: { db: { url: datasourceUrl } } });
+  instances.push(prisma);
   return {
     prisma,
     cleanup: async () => {
@@ -36,4 +43,10 @@ export async function createBoard(prisma: PrismaClient, slug = 'test0001') {
       ]),
     },
   });
+}
+
+/** Отключает все созданные клиенты (fallback на случай пропущенного cleanup). */
+export async function closeTestPrismaClients(): Promise<void> {
+  await Promise.all(instances.map((client) => client.$disconnect().catch(() => undefined)));
+  instances.length = 0;
 }
