@@ -7,4 +7,90 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Модели предметной области добавляются в задаче 2.
+enum TaskStatus {
+  todo
+  progress
+  done
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum DraftStatus {
+  PENDING
+  FINALIZED
+  DISCARDED
+}
+
+model Board {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  color     String
+  columns   String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tasks  Task[]
+  users  BoardUser[]
+  drafts ParsedDraft[]
+
+  @@map("boards")
+}
+
+model Task {
+  id        String       @id @default(cuid())
+  boardId   String       @map("board_id")
+  title     String
+  status    TaskStatus   @default(todo)
+  priority  TaskPriority @default(medium)
+  dueDate   String?      @map("due_date")
+  tags      String
+  order     Float
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, status, order])
+  @@index([boardId, id])
+  @@map("tasks")
+}
+
+model BoardUser {
+  id        String   @id @default(cuid())
+  boardId   String   @map("board_id")
+  name      String
+  color     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, name])
+  @@map("board_users")
+}
+
+model ParsedDraft {
+  id               String      @id @default(cuid())
+  boardId          String      @map("board_id")
+  clientId         String      @map("client_id")
+  rawText          String      @map("raw_text")
+  parsedFields     String      @map("parsed_fields")
+  status           DraftStatus @default(PENDING)
+  expiresAt        DateTime    @map("expires_at")
+  finalizedTaskIds String      @map("finalized_task_ids")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
+  @@index([updatedAt])
+  @@map("parsed_drafts")
+}

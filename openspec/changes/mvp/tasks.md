@@ -18,17 +18,17 @@
 
 ## 2. Database Schema (Prisma)
 
-- [ ] 2.1 Описать Board (`slug`, `name`, `color`, columns JSON TEXT, timestamps, `deleted_at`), Task, BoardUser и ParsedDraft; SubTask не создавать
-- [ ] 2.2 Добавить Task поля title/status/priority/dueDate/tags JSON TEXT/order/timestamps и индексы `(boardId,status,order)`, `(boardId,id)`
-- [ ] 2.3 Добавить ParsedDraft поля clientId/rawText/parsedFields/status/expiresAt/finalizedTaskIds JSON TEXT/timestamps; UNIQUE `Board.slug`, UNIQUE `(boardId,name)` BoardUser, индексы `(status,expiresAt)` и `updatedAt`
-- [ ] 2.4 Выполнить `prisma migrate dev --name init`; integration-проверить создание SQLite, ограничения уникальности и каскадное удаление связанных записей
+- [x] 2.1 Описать Board (`slug`, `name`, `color`, columns JSON TEXT, timestamps, `deleted_at`), Task, BoardUser и ParsedDraft; SubTask не создавать
+- [x] 2.2 Добавить Task поля title/status/priority/dueDate/tags JSON TEXT/order/timestamps и индексы `(boardId,status,order)`, `(boardId,id)`
+- [x] 2.3 Добавить ParsedDraft поля clientId/rawText/parsedFields/status/expiresAt/finalizedTaskIds JSON TEXT/timestamps; UNIQUE `Board.slug`, UNIQUE `(boardId,name)` BoardUser, индексы `(status,expiresAt)` и `updatedAt`
+- [x] 2.4 Выполнить `prisma migrate dev --name init`; integration-проверить создание SQLite, ограничения уникальности и каскадное удаление связанных записей
 
 ## 3. Fastify Server Core
 
-- [ ] 3.1 Настроить CORS whitelist, body limit 500KB, rate limit 100 req/min/IP, порт из env, graceful shutdown и `$disconnect` Prisma
-- [ ] 3.2 Реализовать генератор slug через `crypto.randomInt` с collision retry и deterministic `hashColor()` в HSL; unit-тесты формата и детерминизма
-- [ ] 3.3 Реализовать серверный `clientId` в HttpOnly SameSite cookie и общие Zod-схемы Board/Task/Draft, единый error handler 400/404/401/409/503
-- [ ] 3.4 Реализовать транзакционный helper обновления `Board.updated_at` и unit/integration-тесты правил активности
+- [x] 3.1 Настроить CORS whitelist, body limit 500KB, rate limit 100 req/min/IP, порт из env, graceful shutdown и `$disconnect` Prisma
+- [x] 3.2 Реализовать генератор slug через `crypto.randomInt` с collision retry и deterministic `hashColor()` в HSL; unit-тесты формата и детерминизма
+- [x] 3.3 Реализовать серверный `clientId` в HttpOnly SameSite cookie и общие Zod-схемы Board/Task/Draft, единый error handler 400/404/401/409/503
+- [x] 3.4 Реализовать транзакционный helper обновления `Board.updated_at` и unit/integration-тесты правил активности
 
 ## 4. Board Management API
 

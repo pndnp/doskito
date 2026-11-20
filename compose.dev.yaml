@@ -9,6 +9,7 @@ services:
       - ./server/prisma:/app/prisma
       - ./server/package.json:/app/package.json
       - ./server/.prettierrc.json:/app/.prettierrc.json
+      - ./server/.prettierignore:/app/.prettierignore
       - ./server/eslint.config.js:/app/eslint.config.js
       - ./server/tsconfig.json:/app/tsconfig.json
       - ./server/tsconfig.build.json:/app/tsconfig.build.json
