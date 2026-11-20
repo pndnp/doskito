@@ -1,0 +1,26 @@
+@import url('/design/tokens.css');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--font-body);
+}
+
+.app {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  padding: var(--page-pad);
+  text-align: center;
+}
+
+h1 {
+  font-family: var(--font-display);
+}

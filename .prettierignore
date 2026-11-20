@@ -1,0 +1,11 @@
+node_modules
+coverage
+dist
+.git
+.husky/_
+package-lock.json
+openspec
+design
+Dockerfile*
+compose*.yaml
+*.md

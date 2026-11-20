@@ -1,0 +1,20 @@
+{
+  "name": "doskito",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "eslint": "9.39.4",
+    "husky": "9.1.7",
+    "lint-staged": "16.3.3",
+    "prettier": "3.8.3",
+    "stylelint": "16.26.1",
+    "stylelint-config-standard": "39.0.1",
+    "typescript-eslint": "8.59.0"
+  }
+}

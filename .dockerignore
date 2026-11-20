@@ -1,0 +1,12 @@
+.git
+.opencode
+**/node_modules
+**/dist
+**/coverage
+data
+.env
+.env.*
+openspec
+scripts
+server
+client/Dockerfile

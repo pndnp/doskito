@@ -1,0 +1,35 @@
+{
+  "name": "doskito-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --enable-source-maps dist/index.js",
+    "migrate": "prisma migrate deploy",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "test:integration": "tsx --test tests/integration/*.test.ts",
+    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm test"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "fastify": "5.10.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@types/node": "24.13.2",
+    "eslint": "9.39.4",
+    "prettier": "3.8.3",
+    "prisma": "6.19.3",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.0"
+  }
+}
