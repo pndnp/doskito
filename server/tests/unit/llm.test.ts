@@ -53,16 +53,24 @@ test('нормализация отклоняет ответ без title', () =
 test('LLMProvider повторяет попытку при invalid JSON и 5xx, максимум 2 попытки', async () => {
   const usage: LlmUsage[] = [];
   const log = (entry: LlmUsage) => usage.push(entry);
+  const delays: number[] = [];
+  const callsBeforeSleeps: number[] = [];
+  const sleep = async (ms: number) => {
+    delays.push(ms);
+    callsBeforeSleeps.push(success.calls.length);
+  };
 
   // Попытка 1: invalid JSON, попытка 2: валидный ответ
   const success = fakeFetch([
     { body: { choices: [{ message: { content: 'не JSON' } }] } },
     { body: { choices: [{ message: { content: JSON.stringify(VALID_LLM_RESPONSE) } }] } },
   ]);
-  const provider1 = new LLMProvider({ fetchImpl: success.fetchImpl, log });
+  const provider1 = new LLMProvider({ fetchImpl: success.fetchImpl, log, sleep });
   const result = await provider1.parse('Подготовить релиз к пятнице');
   assert.equal(result.fields.title, 'Подготовка релиза');
   assert.equal(success.calls.length, 2);
+  assert.deepEqual(delays, [250]);
+  assert.deepEqual(callsBeforeSleeps, [1]);
   assert.equal(usage.length, 2); // логируется каждая успешная попытка
   assert.equal(usage.at(-1)?.attempt, 2);
   assert.equal(usage.at(-1)?.promptTokens, null);
@@ -72,9 +80,10 @@ test('LLMProvider повторяет попытку при invalid JSON и 5xx, 
     { status: 500, body: null },
     { status: 503, body: null },
   ]);
-  const provider2 = new LLMProvider({ fetchImpl: failing.fetchImpl, log });
+  const provider2 = new LLMProvider({ fetchImpl: failing.fetchImpl, log, sleep });
   await assert.rejects(provider2.parse('текст'), /LLM недоступна/);
   assert.equal(failing.calls.length, 2);
+  assert.deepEqual(delays, [250, 250]);
 });
 
 test('request body содержит system/user messages, JSON response format и ключ', async () => {

@@ -6,6 +6,7 @@ export interface LlmParseOptions {
   fetchImpl?: typeof fetch;
   now?: () => number;
   log?: (usage: LlmUsage) => void;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface LlmUsage {
@@ -34,6 +35,7 @@ export class LLMProvider {
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => number;
   private readonly log: (usage: LlmUsage) => void;
+  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: LlmParseOptions = {}) {
     this.apiUrl = (process.env.NEURALDEEP_API_URL ?? '').replace(/\/$/, '');
@@ -44,6 +46,7 @@ export class LLMProvider {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.now = options.now ?? Date.now;
     this.log = options.log ?? defaultUsageLog;
+    this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
   isConfigured(): boolean {
@@ -60,6 +63,7 @@ export class LLMProvider {
         return normalized;
       } catch (error) {
         errorFeedback = error instanceof Error ? error.message : String(error);
+        if (attempt === 1) await this.sleep(250);
       }
     }
     throw new LLMUnavailableError(errorFeedback);

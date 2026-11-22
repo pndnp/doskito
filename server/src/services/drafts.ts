@@ -8,17 +8,14 @@ import {
   taskPrioritySchema,
   type ParsedFields,
 } from '../schemas.js';
-import { serializeDraft, type DraftPublic } from './boards.js';
+import { serializeDraft, serializeTask, type DraftPublic } from './boards.js';
+import { nextTaskOrder } from './tasks.js';
 import { publishOwnerEvent, publishPublicEvent } from './events.js';
 import { getPrisma } from '../db.js';
 
 export const DRAFT_TTL_MINUTES = 30;
 
 const finalizedTaskIdsSchema = z.string().array();
-
-export function serializeFinalizedTaskView(task: { id: string; title: string }) {
-  return { id: task.id, title: task.title };
-}
 
 interface DraftRecord {
   id: string;
@@ -96,18 +93,25 @@ export async function finalizeDraft(slug: string, draftId: string, clientId: str
   if (draft.status === 'FINALIZED') {
     const taskIds = parseStoredJson(draft.finalizedTaskIds, finalizedTaskIdsSchema);
     const tasks = await prisma.task.findMany({ where: { id: { in: taskIds } } });
-    return { draftId, tasks: tasks.map(serializeFinalizedTaskView) };
+    const tasksById = new Map(tasks.map((task) => [task.id, task]));
+    return {
+      draftId,
+      tasks: taskIds.flatMap((id) => {
+        const task = tasksById.get(id);
+        return task ? [serializeTask(task)] : [];
+      }),
+    };
   }
   if (draft.expiresAt.getTime() <= Date.now()) throw notFound('Черновик не найден');
 
   const fields = parseStoredJson(draft.parsedFields, parsedFieldsSchema);
   const created = await withBoardActivity(prisma, draft.boardId, async (transaction) => {
-    const order = await nextOrder(transaction, draft.boardId);
+    const order = await nextTaskOrder(transaction, draft.boardId, 'todo');
     const tasksData = buildFinalizedTasks(fields, draft.boardId, order);
-    const tasks: Array<{ id: string; title: string }> = [];
+    const tasks: Prisma.TaskGetPayload<object>[] = [];
     for (const data of tasksData) {
       const task = await transaction.task.create({ data });
-      tasks.push({ id: task.id, title: task.title });
+      tasks.push(task);
     }
     await transaction.parsedDraft.update({
       where: { id: draftId },
@@ -117,13 +121,13 @@ export async function finalizeDraft(slug: string, draftId: string, clientId: str
   });
 
   for (const task of created) {
-    publishPublicEvent(slug, 'task_created', task);
+    publishPublicEvent(slug, 'task_created', { task: serializeTask(task) });
   }
   publishOwnerEvent(slug, clientId, 'draft_finalized', {
     draftId,
     taskIds: created.map((task) => task.id),
   });
-  return { draftId, tasks: created.map(serializeFinalizedTaskView) };
+  return { draftId, tasks: created.map(serializeTask) };
 }
 
 function buildFinalizedTasks(
@@ -150,20 +154,11 @@ function buildFinalizedTasks(
   return items.map((item, index) => ({ ...shared, ...item, order: startOrder + index }));
 }
 
-async function nextOrder(transaction: Prisma.TransactionClient, boardId: string) {
-  const last = await transaction.task.findFirst({
-    where: { boardId },
-    orderBy: { order: 'desc' },
-    select: { order: true },
-  });
-  return (last?.order ?? -1) + 1;
-}
-
 /** Минутный TTL cleanup: истёкшие PENDING → DISCARDED. */
 export async function cleanupExpiredDrafts(now = new Date()) {
   const prisma = getPrisma();
   const expired = await prisma.parsedDraft.findMany({
-    where: { status: 'PENDING', expiresAt: { lte: now } },
+    where: { status: 'PENDING', expiresAt: { lte: now }, board: { deletedAt: null } },
     select: { id: true, clientId: true, board: { select: { slug: true } } },
   });
   for (const draft of expired) {

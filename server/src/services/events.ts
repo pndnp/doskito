@@ -1,3 +1,5 @@
+import type { ServerResponse } from 'node:http';
+
 export type SseAudience = 'public' | { owner: string };
 
 export interface BoardSseEvent {
@@ -7,15 +9,31 @@ export interface BoardSseEvent {
   audience: SseAudience;
 }
 
+export interface SseSubscriber {
+  clientId: string;
+  response: ServerResponse;
+}
+
 export type BoardEventListener = (event: BoardSseEvent) => void | Promise<void>;
 
+const subscribers = new Map<string, Set<SseSubscriber>>();
 const listenersByBoard = new Map<string, Set<BoardEventListener>>();
 let lastEventId = 0;
 
-/**
- * Подписка на события доски. Используется SSE-эндпоинтом (задача 7)
- * и тестами для проверки публикуемых событий.
- */
+export function addBoardSubscriber(slug: string, subscriber: SseSubscriber): () => void {
+  let boardSubscribers = subscribers.get(slug);
+  if (!boardSubscribers) {
+    boardSubscribers = new Set();
+    subscribers.set(slug, boardSubscribers);
+  }
+  boardSubscribers.add(subscriber);
+
+  return () => {
+    boardSubscribers.delete(subscriber);
+    if (boardSubscribers.size === 0) subscribers.delete(slug);
+  };
+}
+
 export function subscribeBoardEvents(slug: string, listener: BoardEventListener): () => void {
   let listeners = listenersByBoard.get(slug);
   if (!listeners) {
@@ -43,10 +61,16 @@ export function publishOwnerEvent(
 }
 
 function dispatch(slug: string, event: Omit<BoardSseEvent, 'id'>): void {
-  const listeners = listenersByBoard.get(slug);
-  if (!listeners || listeners.size === 0) return;
+  const boardSubscribers = subscribers.get(slug);
+  const boardListeners = listenersByBoard.get(slug);
+  if (!boardSubscribers?.size && !boardListeners?.size) return;
   const sseEvent: BoardSseEvent = { ...event, id: (lastEventId += 1) };
-  for (const listener of listeners) {
+  for (const subscriber of [...(subscribers.get(slug) ?? [])]) {
+    if (event.audience !== 'public' && subscriber.clientId !== event.audience.owner) continue;
+    writeEvent(subscriber.response, sseEvent);
+    if (event.type === 'board_deleted') subscriber.response.end();
+  }
+  for (const listener of listenersByBoard.get(slug) ?? []) {
     try {
       const result = listener(sseEvent);
       if (result instanceof Promise) result.catch(() => undefined);
@@ -56,7 +80,32 @@ function dispatch(slug: string, event: Omit<BoardSseEvent, 'id'>): void {
   }
 }
 
-/** Сброс состояния шины между тестами. */
+export function createSseEvent(type: string, payload: unknown): BoardSseEvent {
+  return { id: (lastEventId += 1), type, payload, audience: 'public' };
+}
+
+export function writeEvent(response: ServerResponse, event: BoardSseEvent): void {
+  if (response.destroyed || response.writableEnded) return;
+  try {
+    response.write(formatSseEvent(event));
+  } catch {
+    response.destroy();
+  }
+}
+
+export function formatSseEvent(event: BoardSseEvent): string {
+  return `id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`;
+}
+
+export function closeBoardSubscribers(): void {
+  for (const boardSubscribers of subscribers.values()) {
+    for (const subscriber of boardSubscribers) subscriber.response.end();
+  }
+  subscribers.clear();
+}
+
+/** Очистка состояния только между изолированными тестами. */
 export function resetEventBus(): void {
+  subscribers.clear();
   listenersByBoard.clear();
 }

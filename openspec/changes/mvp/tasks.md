@@ -35,44 +35,40 @@
 - [x] 4.1 Реализовать `POST /api/boards` (201) с именем «Моя доска», цветом, slug/url и колонками «Сделать», «Делаю», «Готово»
 - [x] 4.2 Реализовать `GET /api/boards/:slug`: полное состояние, сортировка, drafts только текущего clientId и единый 404 для missing/deleted
 - [x] 4.3 Реализовать `PATCH /api/boards/:slug` для имени 1–80 символов, обновление activity и SSE `board_updated`
-- [ ] 4.4 Реализовать `DELETE /api/boards/:slug`: транзакционный soft delete Board + hard delete связей, 204, SSE `board_deleted(manual)`, повторный 404
-  <!-- Снято: SSE-публикация board_deleted есть в deletion.ts, но подписчика /sse нет (блок 7 не выполнен). -->
+- [x] 4.4 Реализовать `DELETE /api/boards/:slug`: транзакционный soft delete Board + hard delete связей, 204, SSE `board_deleted(manual)`, повторный 404
 
 - [x] 4.5 Реализовать `POST /api/boards/:slug/join` с trim/1–40, upsert 200/201, цветом и SSE только для нового участника
 - [x] 4.6 Реализовать `POST /api/boards/summaries` до 100 slug с metadata/counts/missingSlugs без изменения activity
-- [ ] 4.7 Реализовать суточный cleanup условием `updated_at < now() - 30 дней`, общий deletion service и `board_deleted(inactivity)`; тесты границы cutoff
-  <!-- Снято: cleanupInactiveBoards написана и протестирована, но нигде не вызывается — планировщика (суточного запуска) в index.ts нет. -->
+- [x] 4.7 Реализовать суточный cleanup условием `updated_at < now() - 30 дней`, общий deletion service и `board_deleted(inactivity)`; тесты границы cutoff
 
 - [x] 4.8 Реализовать `GET /admin/boards` с `X-Admin-Secret` из env, активными и удалёнными досками; тесты 401/200
 
 ## 5. AI Parse & Drafts API
 
 - [x] 5.1 Реализовать LLMProvider и NeuralDeep `/chat/completions`: env key/model, system/user messages, JSON response format, timeout и response-size limit
-- [ ] 5.2 Реализовать максимум 2 attempts для network/timeout/5xx/invalid JSON с error feedback и экспоненциальной задержкой; логировать latency/token usage без rawText и секретов
-  <!-- Снято: 2 попытки и логирование есть в llm.ts, но экспоненциальной задержки между попытками нет (вторая стартует сразу). -->
+- [x] 5.2 Реализовать максимум 2 attempts для network/timeout/5xx/invalid JSON с error feedback и экспоненциальной задержкой; логировать latency/token usage без rawText и секретов
 
 - [x] 5.3 Реализовать Zod-нормализацию: обязательный title, priority fallback medium, dueDate fallback null, tags limits, 0–10 subTasks и признак усечения
 - [x] 5.4 Реализовать `POST /api/boards/:slug/tasks/parsed`: rawText 1–500, PENDING с clientId/expiresAt, 201 с draftId/parsedFields/expiresAt, 400 и 503 по контракту
 - [x] 5.5 Реализовать `PATCH /api/boards/:slug/drafts/:draftId` полным parsedFields с валидацией title 1–200, 0–10 subTasks и owner/PENDING/TTL checks
 - [x] 5.6 Реализовать идемпотентный `POST .../drafts/:draftId/finalize`: транзакционно основная Task + 2–10 самостоятельных Tasks, наследование priority/dueDate/tags, finalizedTaskIds и повторный 200 без дублей
-- [ ] 5.7 Реализовать `POST .../drafts/:draftId/discard`, owner-only SSE `draft_discarded(manual)` и минутный TTL cleanup с `expired`
-  <!-- Снято: cleanupExpiredDrafts написана и протестирована, но нигде не вызывается (планировщика нет); owner-only SSE ждёт подписчика блока 7. -->
+- [x] 5.7 Реализовать `POST .../drafts/:draftId/discard`, owner-only SSE `draft_discarded(manual)` и минутный TTL cleanup с `expired`
 
 - [x] 5.8 Integration-тесты: 0/1/2/10/11 AI-подзадач, invalid priority/date/title, двойной finalize, чужой clientId, expired/discarded draft, rollback транзакции и LLM 503
 
 ## 6. Task Board API
 
-- [ ] 6.1 Реализовать `POST /api/boards/:slug/tasks` с ручным созданием во всех статусах, серверным order, 201 и SSE `task_created`
-- [ ] 6.2 Реализовать `PATCH /api/boards/:slug/tasks/:taskId` для title/status/priority/dueDate/tags/order, валидацию и полный task в `task_updated`
-- [ ] 6.3 Реализовать `DELETE /api/boards/:slug/tasks/:taskId` с 204 и `task_deleted`; проверить 404 для missing/чужой доски
-- [ ] 6.4 Integration-тесты всех enum/date/tag/title ограничений, ordering, last-write-wins и обновления board activity
+- [x] 6.1 Реализовать `POST /api/boards/:slug/tasks` с ручным созданием во всех статусах, серверным order, 201 и SSE `task_created`
+- [x] 6.2 Реализовать `PATCH /api/boards/:slug/tasks/:taskId` для title/status/priority/dueDate/tags/order, валидацию и полный task в `task_updated`
+- [x] 6.3 Реализовать `DELETE /api/boards/:slug/tasks/:taskId` с 204 и `task_deleted`; проверить 404 для missing/чужой доски
+- [x] 6.4 Integration-тесты всех enum/date/tag/title ограничений, ordering, last-write-wins и обновления board activity
 
 ## 7. SSE Real-time Sync
 
-- [ ] 7.1 Реализовать subscribers store `(boardSlug,clientId) -> Set<Response>`, broadcast/public/owner-only, heartbeat 15s и cleanup close/write error
-- [ ] 7.2 Реализовать `GET /api/boards/:slug/sse` с 404 до открытия, headers, `retry: 3000`, `ready`, монотонными event ids и корректным JSON formatting
-- [ ] 7.3 Публиковать после commit все task/board/user/draft события; закрывать потоки после board_deleted; ошибка одного subscriber не откатывает mutation
-- [ ] 7.4 Тесты heartbeat/cleanup, owner-only drafts, отсутствие duplicate user_joined, все payload и закрытие при удалении
+- [x] 7.1 Реализовать subscribers store `(boardSlug,clientId) -> Set<Response>`, broadcast/public/owner-only, heartbeat 15s и cleanup close/write error
+- [x] 7.2 Реализовать `GET /api/boards/:slug/sse` с 404 до открытия, headers, `retry: 3000`, `ready`, монотонными event ids и корректным JSON formatting
+- [x] 7.3 Публиковать после commit все task/board/user/draft события; закрывать потоки после board_deleted; ошибка одного subscriber не откатывает mutation
+- [x] 7.4 Тесты heartbeat/cleanup, owner-only drafts, отсутствие duplicate user_joined, все payload и закрытие при удалении
 
 ## 8. Frontend Foundation, Welcome & Boards UI
 

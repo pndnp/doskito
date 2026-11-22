@@ -1,12 +1,15 @@
 import Fastify from 'fastify';
 import { z } from 'zod';
-import { prisma } from './db.js';
+import { getPrisma } from './db.js';
 import { registerErrorHandler } from './errors.js';
 import { registerSecurity } from './plugins/security.js';
 import type { SecurityOptions } from './plugins/security.js';
 import { registerBoardRoutes } from './routes/boards.js';
 import { registerDraftRoutes } from './routes/drafts.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerSseRoutes } from './routes/sse.js';
+import { registerCleanupSchedulers } from './services/scheduler.js';
+import { closeBoardSubscribers } from './services/events.js';
 import type { LLMProvider } from './services/llm.js';
 import { defaultLLMProvider } from './services/llm.js';
 
@@ -25,10 +28,12 @@ export function buildApp(options: BuildAppOptions = {}) {
   registerSecurity(app, options.security);
   registerBoardRoutes(app, options.llm ?? defaultLLMProvider);
   registerDraftRoutes(app);
+  registerSseRoutes(app);
   registerAdminRoutes(app);
+  registerCleanupSchedulers(app);
 
   app.get('/api/health', async () => {
-    await prisma.$queryRaw`SELECT 1`;
+    await getPrisma().$queryRaw`SELECT 1`;
     return {
       status: 'ok',
       dependencies: z.object({ database: z.literal('ok') }).parse({ database: 'ok' }),
@@ -36,7 +41,8 @@ export function buildApp(options: BuildAppOptions = {}) {
   });
 
   app.addHook('onClose', async () => {
-    await prisma.$disconnect();
+    closeBoardSubscribers();
+    await getPrisma().$disconnect();
   });
 
   return app;

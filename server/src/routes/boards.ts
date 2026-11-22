@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { getPrisma } from '../db.js';
 import { notFound, serviceUnavailable } from '../errors.js';
 import { generateUniqueSlug, hashColor } from '../lib/identity.js';
-import { withBoardActivity, touchBoard } from '../lib/board-activity.js';
+import { withBoardActivity } from '../lib/board-activity.js';
 import { publishPublicEvent } from '../services/events.js';
 import { getActiveBoard, getBoardState, DEFAULT_COLUMNS } from '../services/boards.js';
 import { softDeleteBoard } from '../services/deletion.js';
@@ -11,10 +11,13 @@ import {
   joinSchema,
   summariesSchema,
   parseTaskSchema,
+  createTaskSchema,
+  patchTaskSchema,
 } from '../schemas/requests.js';
 import { ensureClientId } from '../plugins/security.js';
 import type { LLMProvider } from '../services/llm.js';
 import { DRAFT_TTL_MINUTES } from '../services/drafts.js';
+import { createTask, updateTask, deleteTask } from '../services/tasks.js';
 
 export function registerBoardRoutes(app: FastifyInstance, llm: LLMProvider): void {
   const prisma = getPrisma();
@@ -85,11 +88,12 @@ export function registerBoardRoutes(app: FastifyInstance, llm: LLMProvider): voi
   app.patch('/api/boards/:slug', async (request) => {
     const { slug } = request.params as { slug: string };
     const { name } = renameBoardSchema.parse(request.body ?? {});
-    const board = await getActiveBoard(prisma, slug);
-    await touchBoard(prisma, board.id);
-    await prisma.board.update({ where: { id: board.id }, data: { name } });
-    publishPublicEvent(slug, 'board_updated', { name });
-    return { slug: board.slug, name };
+    const currentBoard = await getActiveBoard(prisma, slug);
+    const board = await withBoardActivity(prisma, currentBoard.id, (transaction) =>
+      transaction.board.update({ where: { id: currentBoard.id }, data: { name } }),
+    );
+    publishPublicEvent(slug, 'board_updated', { name: board.name, color: board.color });
+    return { slug: board.slug, name: board.name };
   });
 
   // DELETE /api/boards/:slug — soft delete (REQ-BM-4)
@@ -120,6 +124,30 @@ export function registerBoardRoutes(app: FastifyInstance, llm: LLMProvider): voi
     );
     publishPublicEvent(slug, 'user_joined', { name: user.name, color: user.color });
     return reply.status(201).send({ name: user.name, color: user.color });
+  });
+
+  // POST /api/boards/:slug/tasks — ручное создание (REQ-TB-1)
+  app.post('/api/boards/:slug/tasks', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const fields = createTaskSchema.parse(request.body ?? {});
+    const board = await getActiveBoard(prisma, slug);
+    return reply.status(201).send(await createTask(prisma, board.id, slug, fields));
+  });
+
+  // PATCH /api/boards/:slug/tasks/:taskId — редактирование и перемещение (REQ-TB-2)
+  app.patch('/api/boards/:slug/tasks/:taskId', async (request) => {
+    const { slug, taskId } = request.params as { slug: string; taskId: string };
+    const fields = patchTaskSchema.parse(request.body ?? {});
+    const board = await getActiveBoard(prisma, slug);
+    return updateTask(prisma, board.id, slug, taskId, fields);
+  });
+
+  // DELETE /api/boards/:slug/tasks/:taskId — удаление (REQ-TB-2)
+  app.delete('/api/boards/:slug/tasks/:taskId', async (request, reply) => {
+    const { slug, taskId } = request.params as { slug: string; taskId: string };
+    const board = await getActiveBoard(prisma, slug);
+    await deleteTask(prisma, board.id, slug, taskId);
+    return reply.status(204).send();
   });
 
   // POST /api/boards/:slug/tasks/parsed — AI Parse (REQ-TP-1)
