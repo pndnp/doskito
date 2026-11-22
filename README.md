@@ -41,19 +41,19 @@ cp .env.example .env
 
 ```bash
 # UI: http://localhost:5173, API: http://localhost:3001
-docker compose -f compose.yaml -f compose.dev.yaml up --build
+docker compose --profile dev up --build
 
 # Остановка без удаления данных
-docker compose -f compose.yaml -f compose.dev.yaml down
+docker compose --profile dev down
 ```
 
-Vite проксирует `/api` на `http://server:3001`. Исходники смонтированы в контейнеры, HMR и `tsx watch` включены. `node_modules` находятся в отдельных named volumes.
+Vite проксирует `/api` на `http://server-dev:3001`. Исходники смонтированы в контейнеры, HMR и `tsx watch` включены. `node_modules` находятся в отдельных named volumes.
 
 После изменения `server/prisma/schema.prisma` создайте новую миграцию:
 
 ```bash
-docker compose -f compose.yaml -f compose.dev.yaml run --rm \
-  -e RUN_MIGRATIONS=false server npx prisma migrate dev --name change_name
+docker compose --profile dev run --rm \
+  -e RUN_MIGRATIONS=false server-dev npx prisma migrate dev --name change_name
 ```
 
 Не перезаписывайте уже применённые миграции. При старте сервер автоматически выполняет `prisma migrate deploy`.
@@ -79,7 +79,7 @@ sh scripts/check.sh
 
 ```bash
 # Только http://127.0.0.1:8080 опубликован наружу
-docker compose -f compose.yaml -f compose.prod.yaml up --build -d
+docker compose up --build -d
 ```
 
 Nginx раздаёт статический client build, проксирует API и SSE без buffering, запрещает `/admin/*`. Каталог `data/` в nginx не монтируется, поэтому SQLite-файл недоступен по HTTP.
@@ -93,7 +93,7 @@ Nginx раздаёт статический client build, проксирует A
 Онлайн-backup выполняется SQLite Backup API в отдельный файл того же каталога:
 
 ```bash
-docker compose -f compose.yaml -f compose.prod.yaml exec server \
+docker compose exec server \
   node -e "const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.\$queryRawUnsafe(\"VACUUM INTO '/app/data/backup.db'\").finally(() => p.\$disconnect())"
 ```
 

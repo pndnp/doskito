@@ -31,32 +31,32 @@
 
 На хосте обязательны только Docker с Compose plugin и Git для pre-commit tooling. Node.js, зависимости, миграции, линтеры и тесты выполняются в контейнерах с закреплённой версией Node LTS. Два режима используют одни исходники и переменные:
 
-- `compose.yaml` — production-like запуск: backend выполняет `prisma migrate deploy`, затем запускает собранный Fastify; frontend собирается в static assets и раздаётся отдельным nginx-контейнером.
-- `compose.dev.yaml` поверх базового файла — bind mounts исходников, named volumes для `node_modules`, `tsx watch` и Vite HMR. Vite проксирует `/api` на `http://server:3001`, браузер использует относительный API URL.
+- `compose.yaml` — единый файл. По умолчанию (`docker compose up -d --build`) — production-like запуск: backend выполняет `prisma migrate deploy`, затем запускает собранный Fastify; frontend собирается в static assets и раздаётся отдельным nginx-контейнером `web` на `127.0.0.1:8080`.
+- Dev-сервисы `server-dev` и `client` включаются профилем `dev` (`docker compose --profile dev up -d --build`): bind mounts исходников, named volumes для `node_modules`, `tsx watch` и Vite HMR. Vite проксирует `/api` на `http://server-dev:3001`, браузер использует относительный API URL.
 - SQLite в dev и production находится на хосте через bind mount `./data:/app/data`; файл БД `data/doskito.db` сохраняется при `restart`, `up --build`, `down` и замене образа. Сервис server один, чтобы избежать concurrent writers. Каталог данных не монтируется в web/nginx и не отдаётся по HTTP. Production собирается multi-stage Dockerfile с `npm ci`, non-root user и pinned base image; права host-каталога настраиваются для UID контейнера.
-- `compose.prod.yaml` сохраняет только bind mount данных, не исходников или dev-зависимостей; dev-портов нет, публикуется только nginx на `127.0.0.1:8080` за внешним reverse proxy с HTTPS. `/admin/*` блокируется на nginx, а API дополнительно проверяет `X-Admin-Secret`. SSE proxy отключает buffering и имеет таймауты выше heartbeat.
+- Прод-сервисы сохраняют только bind mount данных, не исходники или dev-зависимости; dev-портов нет, публикуется только nginx на `127.0.0.1:8080` за внешним reverse proxy с HTTPS. `/admin/*` блокируется на nginx, а API дополнительно проверяет `X-Admin-Secret`. SSE proxy отключает buffering и имеет таймауты выше heartbeat.
 - Секреты передаются через env-файл VPS, не включаются в image и не попадают в Vite bundle. На VPS `data/` живёт рядом с Compose-файлами вне release-артефактов. Backup выполняется через SQLite backup API в отдельный файл host-каталога; простое копирование `.db` допускается только при остановленном server. `data/` добавляется в `.gitignore`, но не удаляется командами очистки Docker.
 
 Команды:
 
 ```bash
 # Локальная разработка: UI http://localhost:5173, API http://localhost:3001
-docker compose -f compose.yaml -f compose.dev.yaml up --build
+docker compose --profile dev up --build
 
 # Проверки в одноразовых контейнерах
-docker compose -f compose.yaml -f compose.dev.yaml run --rm server npm run lint
-docker compose -f compose.yaml -f compose.dev.yaml run --rm client npm run lint
-docker compose -f compose.yaml -f compose.dev.yaml run --rm server npm test
-docker compose -f compose.yaml -f compose.dev.yaml run --rm client npm test
-docker compose -f compose.yaml -f compose.dev.yaml run --rm build
+docker compose --profile dev run --rm server-dev npm run lint
+docker compose --profile dev run --rm client npm run lint
+docker compose --profile dev run --rm server-dev npm test
+docker compose --profile dev run --rm client npm test
+sh scripts/check.sh
 
 # Production-like проверка до переноса на VPS: http://localhost:8080
-docker compose -f compose.yaml -f compose.prod.yaml up --build
+docker compose up --build -d
 ```
 
 ### D16: Проверки в Docker
 
-Профиль `test` содержит одноразовые server/client runners и Playwright E2E-контейнер. Unit/integration tests используют временную SQLite БД, E2E — отдельный каталог временных данных и изолированный project name, чтобы не удалять `./data` разработчика. Обязательный pre-release набор: lint, format check, typecheck, production build, unit/integration tests, Playwright и проверка health endpoint. Healthcheck backend проверяет доступность процесса и БД, frontend — выдачу index.html.
+Unit/integration и Playwright E2E запускаются на хосте (`npm test`, `npm run test:e2e`, см. README). Unit/integration используют временную SQLite БД, E2E — отдельный каталог временных данных, чтобы не удалять `./data` разработчика. Единая проверка lint/format/typecheck/build/healthchecks — `sh scripts/check.sh` в одноразовых dev-контейнерах. Обязательный pre-release набор: lint, format check, typecheck, production build, unit/integration tests, Playwright и проверка health endpoint. Healthcheck backend проверяет доступность процесса и БД, frontend — выдачу index.html.
 
 Pre-commit остаётся быстрым хуком на хосте через Husky/lint-staged, но использует те же конфиги и pinned versions, что Docker. Команда `docker compose ... run --rm lint` является эквивалентной проверкой для разработчика без локального Node.
 
@@ -298,7 +298,7 @@ PENDING → FINALIZED → (повторный finalize возвращает со
 mkdir -p server client
 # package.json/lockfiles и Dockerfiles создаются в server/ и client/
 # Node/npm не требуются на хосте: сборка и dev server запускаются в Docker
-docker compose -f compose.yaml -f compose.dev.yaml up --build
+docker compose --profile dev up --build
 ```
 
 **Phase 1 — Database + Backend skeleton (Days 2-3):**

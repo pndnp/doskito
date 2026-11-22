@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -14,7 +15,8 @@ const instances: PrismaClient[] = [];
 export function createTestDatabase(): TestDatabase {
   const directory = mkdtempSync(join(tmpdir(), 'doskito-test-'));
   const datasourceUrl = `file:${join(directory, 'doskito.db')}`;
-  execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'deploy'], {
+  const prismaCli = createRequire(import.meta.url).resolve('prisma/build/index.js');
+  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
     cwd: resolve(process.cwd()),
     env: { ...process.env, DATABASE_URL: datasourceUrl },
     stdio: 'pipe',

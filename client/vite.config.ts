@@ -3,9 +3,6 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: { '/design': process.env.DESIGN_PATH ?? '../design' },
-  },
   server: {
     host: '0.0.0.0',
     fs: { allow: ['..'] },

@@ -8,44 +8,102 @@ x-server-env: &server-env
   PORT: 3001
   RUN_MIGRATIONS: "true"
 
+x-server-healthcheck: &server-healthcheck
+  test:
+    [
+      "CMD",
+      "node",
+      "-e",
+      "fetch('http://127.0.0.1:3001/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+    ]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 15s
+
+# По умолчанию (docker compose up -d --build) поднимаются только прод-сервисы: server и web.
+# Dev-сервисы (server-dev, client) включаются профилем: docker compose --profile dev up -d --build
+
 services:
   server:
     build:
-      context: ./server
+      context: .
+      dockerfile: server/Dockerfile
       target: production
     environment: *server-env
     volumes:
       - ./data:/app/data
     init: true
     stop_grace_period: 20s
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3001/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 15s
+    healthcheck: *server-healthcheck
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: production
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    stop_grace_period: 10s
+    restart: unless-stopped
+
+  server-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: development
+    environment: *server-env
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - ./server/src:/app/server/src
+      - ./server/prisma:/app/server/prisma
+      - ./server/package.json:/app/server/package.json
+      - ./server/.prettierrc.json:/app/server/.prettierrc.json
+      - ./server/.prettierignore:/app/server/.prettierignore
+      - ./server/eslint.config.js:/app/server/eslint.config.js
+      - ./server/tsconfig.json:/app/server/tsconfig.json
+      - ./server/tsconfig.build.json:/app/server/tsconfig.build.json
+      - ./server/prisma.config.ts:/app/server/prisma.config.ts
+      - ./data:/app/data
+      - server_node_modules:/app/node_modules
+    init: true
+    stop_grace_period: 20s
+    healthcheck: *server-healthcheck
     restart: unless-stopped
 
   client:
+    profiles: ["dev"]
     build:
       context: .
       dockerfile: client/Dockerfile
       target: development
+    ports:
+      - "127.0.0.1:5173:5173"
     depends_on:
-      server:
+      server-dev:
         condition: service_healthy
     environment:
-      VITE_PROXY_TARGET: http://server:3001
-      VITE_API_URL: ""
-      DESIGN_PATH: /design
-    stop_grace_period: 10s
+      VITE_PROXY_TARGET: http://server-dev:3001
+    volumes:
+      - ./client/src:/app/client/src
+      - ./client/index.html:/app/client/index.html
+      - ./client/.prettierrc.json:/app/client/.prettierrc.json
+      - ./client/.prettierignore:/app/client/.prettierignore
+      - ./client/eslint.config.js:/app/client/eslint.config.js
+      - ./client/stylelint.config.js:/app/client/stylelint.config.js
+      - ./client/vite.config.ts:/app/client/vite.config.ts
+      - ./client/tsconfig.json:/app/client/tsconfig.json
+      - ./client/tsconfig.app.json:/app/client/tsconfig.app.json
+      - ./client/tsconfig.node.json:/app/client/tsconfig.node.json
+      - client_node_modules:/app/node_modules
     user: node
+    stop_grace_period: 10s
     healthcheck:
       test:
         [
@@ -58,15 +116,6 @@ services:
       timeout: 5s
       retries: 12
 
-  web:
-    build:
-      context: .
-      dockerfile: client/Dockerfile
-      target: production
-      args:
-        VITE_API_URL: ""
-    depends_on:
-      server:
-        condition: service_healthy
-    stop_grace_period: 10s
-    restart: unless-stopped
+volumes:
+  server_node_modules:
+  client_node_modules:

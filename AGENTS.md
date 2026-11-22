@@ -54,6 +54,9 @@ npm run build
 
 После каждого обновления проверяй package.json — не должно быть `^` или `~`, только точные версии.
 
+## Prisma
+Если поменяли `server/prisma/schema.prisma`, перегенерируйте клиент: `cd server && npx prisma generate`. Без этого типы в `node_modules/.prisma/client` устарели и `npm run build` сервера падает с ошибками TS (`implicit any`, `unknown`). `postinstall` в `server/package.json` запускает генерацию только при `npm install`, поэтому после правки схемы его недостаточно. Для `prisma generate` нужен `DATABASE_URL` в окружении (значение из `.env`), иначе команда падает с `PrismaConfigEnvError`.
+
 ## Секреты только из .env
 Никогда не вставляй чувтсвительные данные напрямую в код, выноси их в .env
 

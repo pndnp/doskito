@@ -1,0 +1,186 @@
+/* Доскито: дизайн-токены (тёмная игривая тема).
+   Источник правды для цветов, шрифтов, радиусов и анимаций.
+   В макетах (screens/) все значения заданы инлайн; в коде брать их отсюда. */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Unbounded:wght@700&display=swap');
+
+:root {
+  /* Поверхности */
+  --bg: #15142b; /* фон страницы */
+  --surface: #1d1b3a; /* колонки, поля ввода, статус-строка */
+  --card: #252248; /* карточки задач и досок */
+  --panel: #2d2a5e; /* всплывающие панели (черновик ИИ, баннер) */
+  --field: #1b1936; /* поля внутри панелей */
+  --track: #34306a; /* дорожка прогресс-бара */
+
+  /* Линии */
+  --border-input: #4a4690;
+  --border-dashed: #5a55a8;
+  --border-subtle: #3a3670;
+
+  /* Текст */
+  --text: #f4f1ff;
+  --text-muted: #b4b0de;
+  --text-soft: #c9c4f5; /* иконки, тексты в панелях */
+  --text-chip: #e6e0ff;
+  --on-accent: #15142b; /* текст на ярких плашках и кнопках */
+
+  /* Акценты */
+  --coral: #ff7a66; /* колонка «Сделать» */
+  --yellow: #ffd25e; /* колонка «Делаю», главная кнопка, «Срочно» */
+  --mint: #5eeac0; /* колонка «Готово», прогресс, кнопка подтверждения */
+  --violet: #b69cff; /* фокус, контурные кнопки, панель ИИ */
+  --yellow-shadow: #b88a00; /* «донышко» жёлтой кнопки */
+  --mint-shadow: #1e9c79; /* «донышко» мятной кнопки */
+
+  /* Радиусы */
+  --r-pill: 99px;
+  --r-column: 28px;
+  --r-panel: 28px;
+  --r-board-card: 24px;
+  --r-card: 20px;
+  --r-field: 14px; /* поля внутри панели */
+  --r-tile: 16px;
+
+  /* Шрифты */
+  --font-display: 'Unbounded', sans-serif; /* логотип, заголовки, колонки, проценты */
+  --font-body: 'Nunito', sans-serif;
+
+  /* Размеры */
+  --page-max: 1280px;
+  --page-pad: 28px 40px;
+  --gap-section: 22px;
+  --gap-grid: 20px;
+  --tap: 44px; /* минимальная высота кнопок и полей */
+
+  /* Тени */
+  --shadow-hover: 0 14px 28px rgb(0 0 0 / 45%);
+  --shadow-panel: 0 16px 40px rgb(0 0 0 / 50%);
+
+  /* Движение */
+  --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--text);
+}
+
+/* Карточка: наклон и цвет акцента задаются переменными --r и --a на элементе */
+.card {
+  --r: 0deg;
+  --a: var(--violet);
+
+  transform: rotate(var(--r));
+  outline: 2px solid transparent;
+  transition:
+    transform 0.25s var(--ease-spring),
+    box-shadow 0.25s ease,
+    outline-color 0.25s ease;
+  animation: pop 0.45s ease backwards;
+}
+
+.card:hover {
+  transform: translateY(-5px) rotate(0deg) scale(1.02);
+  box-shadow: var(--shadow-hover);
+  outline-color: var(--a);
+}
+
+.card:nth-child(3) {
+  animation-delay: 0.07s;
+}
+
+.card:nth-child(4) {
+  animation-delay: 0.14s;
+}
+
+/* Прогресс-бар: заливка растёт слева направо */
+.fill {
+  transform-origin: left;
+  animation: grow 0.9s 0.2s ease backwards;
+}
+
+/* Панель черновика ИИ */
+.panel {
+  animation: rise 0.35s ease backwards;
+}
+
+/* Декоративное покачивание (экран «Первый запуск») */
+.bob {
+  animation: bob 4s ease-in-out infinite;
+}
+
+.bob2 {
+  animation-delay: -1.3s;
+}
+
+.bob3 {
+  animation-delay: -2.6s;
+}
+
+button {
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+input:focus {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96) rotate(var(--r));
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes bob {
+  50% {
+    margin-top: -8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .panel,
+  .fill,
+  .bob {
+    animation: none;
+  }
+
+  .card,
+  button {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: rotate(var(--r));
+  }
+}
