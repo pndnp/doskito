@@ -22,13 +22,14 @@ import { createTask, updateTask, deleteTask } from '../services/tasks.js';
 export function registerBoardRoutes(app: FastifyInstance, llm: LLMProvider): void {
   const prisma = getPrisma();
   // POST /api/boards — создание доски (REQ-BM-1)
-  app.post('/api/boards', async (_request, reply) => {
+  app.post('/api/boards', async (request, reply) => {
     let slug: string;
     try {
       slug = await generateUniqueSlug(async (candidate) =>
         Boolean(await prisma.board.findUnique({ where: { slug: candidate } })),
       );
-    } catch {
+    } catch (error) {
+      request.log.error(error, 'Не удалось сгенерировать slug доски');
       throw serviceUnavailable('Не удалось создать доску. Повторите попытку позже.');
     }
 

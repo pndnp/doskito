@@ -9,7 +9,7 @@
 - [x] 1.1 Создать `server/` с Fastify + TypeScript + Prisma + Zod и скриптами dev/build/migrate/lint/test; создать `client/` с Vite + React + TypeScript и скриптами dev/build/lint/test
 - [x] 1.2 Установить TanStack Query, dnd-kit, axios, date-fns, lucide-react и react-router-dom; зафиксировать точные версии всех зависимостей без `^`/`~`
 - [x] 1.3 Создать `.env.example`: `DATABASE_URL=file:./data/doskito.db`, `NEURALDEEP_API_URL`, `NEURALDEEP_API_KEY`, `NEURALDEEP_MODEL`, `ADMIN_SECRET`, `CORS_ORIGIN`, `PORT=3001`, `VITE_API_URL`; не добавлять реальные секреты
-- [x] 1.4 Создать multi-stage `server/Dockerfile` и `client/Dockerfile`, `.dockerignore`, единый `compose.yaml` (prod по умолчанию, dev-сервисы в профиле `dev`); закрепить Node LTS/base images и использовать `npm ci`
+- [x] 1.4 Создать multi-stage `server/Dockerfile` и `client/Dockerfile`, `.dockerignore`, единый `docker-compose.yml` (prod по умолчанию, dev-сервисы в профиле `dev`); закрепить Node LTS/base images и использовать `npm ci`
 - [x] 1.5 Настроить dev-запуск одной командой `docker compose --profile dev up --build`: UI на 5173 с HMR, API на 3001, Vite proxy `/api` → `http://server:3001`, bind mounts исходников и отдельные volumes для node_modules
 - [x] 1.6 Настроить bind mount `./data:/app/data` для SQLite в dev и production, `data/doskito.db` на хосте, права non-root UID, `.gitignore` для БД; автоматический `prisma migrate deploy` перед стартом server, healthchecks server/client и graceful stop
 - [x] 1.7 Настроить production-like `docker compose up -d --build` на localhost:8080: nginx раздаёт client build, проксирует API/SSE без buffering, блокирует `/admin/*`, публикует только web-порт на 127.0.0.1
@@ -72,37 +72,37 @@
 
 ## 8. Frontend Foundation, Welcome & Boards UI
 
-- [ ] 8.1 Настроить HashRouter (`/`, `/:slug`), TanStack Query/axios с `VITE_API_URL`, credentials для clientId, общие toast/error/loading components
-- [ ] 8.2 Реализовать типобезопасный `useBoardsStore` для `doskito_boards`: массив metadata objects, corrupted JSON/storage errors, add/update/remove без потери данных при offline
-- [ ] 8.3 Реализовать Welcome строго по `design/screens/welcome.html`: H1 «Создайте доску», описание 17px, CTA 60px, pills, pop/bob/reduced motion
-- [ ] 8.4 Реализовать Boards UI: instant cached cards → summaries refetch, missing cleanup, stale-data message, 3/2/1-column responsive grid
-- [ ] 8.5 Реализовать общий create/open flow: создание → сохранение → `/#/:slug`; валидация URL/slug, GET перед сохранением, отдельные 404/network errors
-- [ ] 8.6 Реализовать карточки с именем/инициалом/цветом, прогрессом, relative time, «Скопировать ссылку» и feedback; Clipboard fallback при отказе API
-- [ ] 8.7 Реализовать меню `···`: rename, DELETE и «Убрать из списка» только локально; перед DELETE показывать warning modal «Удалить доску для всех?» с последствиями, safe default focus, блокировкой repeat и error retry; добавить дисклеймер 30 дней и dashed create card
-- [ ] 8.8 Компонентные тесты Welcome-vs-list, создания, вставки ссылки, повреждённого localStorage, offline summaries, copy и обоих видов удаления
+- [x] 8.1 Настроить HashRouter (`/`, `/:slug`), TanStack Query/axios с `VITE_API_URL`, credentials для clientId, общие toast/error/loading components
+- [x] 8.2 Реализовать типобезопасный `useBoardsStore` для `doskito_boards`: массив metadata objects, corrupted JSON/storage errors, add/update/remove без потери данных при offline
+- [x] 8.3 Реализовать Welcome строго по `design/screens/welcome.html`: H1 «Создайте доску», описание 17px, CTA 60px, pills, pop/bob/reduced motion
+- [x] 8.4 Реализовать Boards UI: instant cached cards → summaries refetch, missing cleanup, stale-data message, 3/2/1-column responsive grid
+- [x] 8.5 Реализовать общий create/open flow: создание → сохранение → `/#/:slug`; валидация URL/slug, GET перед сохранением, отдельные 404/network errors
+- [x] 8.6 Реализовать карточки с именем/инициалом/цветом, прогрессом, relative time, «Скопировать ссылку» и feedback; Clipboard fallback при отказе API
+- [x] 8.7 Реализовать меню `···`: rename, DELETE и «Убрать из списка» только локально; перед DELETE показывать warning modal «Удалить доску для всех?» с последствиями, safe default focus, блокировкой repeat и error retry; добавить дисклеймер 30 дней и dashed create card
+- [x] 8.8 Компонентные тесты Welcome-vs-list, создания, вставки ссылки, повреждённого localStorage, offline summaries, copy и обоих видов удаления
 
 ## 9. Frontend Kanban & Empty Board
 
-- [ ] 9.1 Реализовать BoardView с board state, шапкой/именем/rename, progress/ARIA, invite modal, участниками, join и SSE status; добавить действие удаления доски с тем же общим предупреждением «Удалить для всех»
-- [ ] 9.2 Реализовать Empty Board по `design/screens/empty-board.html`: save-link banner с persisted dismiss, copy, examples → input, «Пока нет задач» и empty drop zones
-- [ ] 9.3 Реализовать QuickAdd input + «Разобрать»/Enter, 500-char limit, блокировку двойного submit, spinner, 503 toast и ручной fallback
-- [ ] 9.4 Реализовать TaskCard без вложенного прогресса: локализованный priority, tags, dueDate/no-date, overdue по локальному дню, меню edit/move/delete
-- [ ] 9.5 Реализовать формы ручного создания из колонки и редактирования/подтверждения удаления задачи с loading/error/validation
-- [ ] 9.6 Повторить цвета/типографику/отступы board и add-task макетов, animations pop/rise/grow, responsive и `prefers-reduced-motion`
+- [x] 9.1 Реализовать BoardView с board state, шапкой/именем/rename, progress/ARIA, invite modal, участниками, join и SSE status; добавить действие удаления доски с тем же общим предупреждением «Удалить для всех»
+- [x] 9.2 Реализовать Empty Board по `design/screens/empty-board.html`: save-link banner с persisted dismiss, copy, examples → input, «Пока нет задач» и empty drop zones
+- [x] 9.3 Реализовать QuickAdd input + «Разобрать»/Enter, 500-char limit, блокировку двойного submit, spinner, 503 toast и ручной fallback
+- [x] 9.4 Реализовать TaskCard без вложенного прогресса: локализованный priority, tags, dueDate/no-date, overdue по локальному дню, меню edit/move/delete
+- [x] 9.5 Реализовать формы ручного создания из колонки и редактирования/подтверждения удаления задачи с loading/error/validation
+- [x] 9.6 Повторить цвета/типографику/отступы board и add-task макетов, animations pop/rise/grow, responsive и `prefers-reduced-motion`
 
 ## 10. AI Preview, DnD & Optimistic Updates
 
-- [ ] 10.1 Реализовать AiPreview по `design/screens/board-add-task.html`: select priority, native date input, tags editor, 0–10 subtask inputs без чекбоксов, add/remove и blocked background
-- [ ] 10.2 Реализовать последовательное PATCH draft → finalize по «Сохранить на доску», discard по «Отмена», restore PENDING после reload и сохранение ввода при ошибках; обработать гонку TTL через refetch board state и закрытие недоступного черновика
-- [ ] 10.3 Реализовать DndContext для status/order, drop highlights, instant update и keyboard-friendly fallback «Переместить в…»
-- [ ] 10.4 Реализовать общий TanStack optimistic helper cancel/snapshot/set/rollback/invalidate для create/update/delete/move без гонок SSE
-- [ ] 10.5 Реализовать `useSSE` с `withCredentials: true`: все события, инвалидация только текущей доски, ready/reconnect refetch board state и PENDING drafts, owner draft notifications, unmount cleanup и terminal board_deleted
-- [ ] 10.6 После board_deleted/404 удалить slug локально, закрыть SSE и показать экран «Доска удалена или недоступна» с пояснением о ручном/30-дневном удалении и возвратом к списку
+- [x] 10.1 Реализовать AiPreview по `design/screens/board-add-task.html`: select priority, native date input, tags editor, 0–10 subtask inputs без чекбоксов, add/remove и blocked background
+- [x] 10.2 Реализовать последовательное PATCH draft → finalize по «Сохранить на доску», discard по «Отмена», restore PENDING после reload и сохранение ввода при ошибках; обработать гонку TTL через refetch board state и закрытие недоступного черновика
+- [x] 10.3 Реализовать DndContext для status/order, drop highlights, instant update и keyboard-friendly fallback «Переместить в…»
+- [x] 10.4 Реализовать общий TanStack optimistic helper cancel/snapshot/set/rollback/invalidate для create/update/delete/move без гонок SSE
+- [x] 10.5 Реализовать `useSSE` с `withCredentials: true`: все события, инвалидация только текущей доски, ready/reconnect refetch board state и PENDING drafts, owner draft notifications, unmount cleanup и terminal board_deleted
+- [x] 10.6 После board_deleted/404 удалить slug локально, закрыть SSE и показать экран «Доска удалена или недоступна» с пояснением о ручном/30-дневном удалении и возвратом к списку
 
 ## 11. End-to-End Verification
 
-- [ ] 11.1 E2E: Welcome → create → empty board/save link → rename → AI parse → edit draft → finalize → независимые tasks → manual create/edit/delete
-- [ ] 11.2 E2E двух вкладок: join, move/order, rename, rollback, reconnect, owner-only drafts; подтвердить delete board во второй вкладке и проверить warning, отмену без DELETE, ошибку/retry и terminal экран у другого участника
-- [ ] 11.3 E2E Boards UI: copy/invite links, open valid/invalid URL, remove locally vs server delete, persisted banner и localStorage между сессиями
-- [ ] 11.4 Выполнить в Docker production build, lint, format check, typecheck, unit/integration/E2E tests и healthchecks; проверить responsive 320/768/1280px, keyboard flows и reduced motion
-- [ ] 11.5 Запустить production-like Compose и E2E через nginx: SSE reconnect/heartbeat, `/admin/*` denied, API proxy, `up --build`/`down`/restart с сохранением `./data/doskito.db` на хосте и недоступностью файла БД по HTTP; затем `openspec validate mvp --strict` и сверка пяти макетов из `design/screens/` (welcome, empty-board, board, board-add-task, boards-list)
+- [x] 11.1 E2E: Welcome → create → empty board/save link → rename → AI parse → edit draft → finalize → независимые tasks → manual create/edit/delete
+- [x] 11.2 E2E двух вкладок: join, move/order, rename, rollback, reconnect, owner-only drafts; подтвердить delete board во второй вкладке и проверить warning, отмену без DELETE, ошибку/retry и terminal экран у другого участника
+- [x] 11.3 E2E Boards UI: copy/invite links, open valid/invalid URL, remove locally vs server delete, persisted banner и localStorage между сессиями
+- [x] 11.4 Выполнить в Docker production build, lint, format check, typecheck, unit/integration/E2E tests и healthchecks; проверить responsive 320/768/1280px, keyboard flows и reduced motion
+- [x] 11.5 Запустить production-like Compose и E2E через nginx: SSE reconnect/heartbeat, `/admin/*` denied, API proxy, `up --build`/`down`/restart с сохранением `./data/doskito.db` на хосте и недоступностью файла БД по HTTP; затем `openspec validate mvp --strict` и сверка пяти макетов из `design/screens/` (welcome, empty-board, board, board-add-task, boards-list)
