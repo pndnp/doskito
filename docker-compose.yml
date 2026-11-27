@@ -4,7 +4,7 @@ x-server-env: &server-env
   NEURALDEEP_API_KEY: ${NEURALDEEP_API_KEY:-}
   NEURALDEEP_MODEL: ${NEURALDEEP_MODEL:-}
   ADMIN_SECRET: ${ADMIN_SECRET:-}
-  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+  CORS_ORIGIN: "*"
   PORT: 3001
   RUN_MIGRATIONS: "true"
 
@@ -31,6 +31,8 @@ services:
       dockerfile: server/Dockerfile
       target: production
     environment: *server-env
+    ports:
+      - "127.0.0.1:3001:3001"
     volumes:
       - ./data:/app/data
     init: true
@@ -44,7 +46,7 @@ services:
       dockerfile: client/Dockerfile
       target: production
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:9080:80"
     depends_on:
       server:
         condition: service_healthy
